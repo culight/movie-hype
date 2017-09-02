@@ -1,4 +1,4 @@
-import os
+rm movieimport os
 from bs4 import BeautifulSoup
 import requests
 
