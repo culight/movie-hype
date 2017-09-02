@@ -74,8 +74,6 @@ def get_interest(movie_soup):
 
     return round(interest_score, 2)
 
-
-
 # use the title to check if this movie is present in the other dataset
 def is_movie_present(title):
     return True
