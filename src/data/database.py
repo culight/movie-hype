@@ -1,4 +1,4 @@
-DB_FILE = 'db/movie_db'
+DB_FILE = 'data/processed/movie_db'
 
 def create_tables():
     pass

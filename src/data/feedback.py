@@ -1,4 +1,3 @@
-rm movieimport os
 from bs4 import BeautifulSoup
 import requests
 
@@ -33,8 +32,9 @@ def get_movie_urls(list_html):
 
 # scrape the relevant data and store in a SQL database
 def scrape(movie_urls):
+    movie_data = []
     for url in movie_urls:
-        movie_data = {}
+        data = {}
         movie_html = get_html(url)
         movie_soup = BeautifulSoup(movie_html, 'html.parser')
 
@@ -42,13 +42,13 @@ def scrape(movie_urls):
         if not is_movie_present(title):
             continue
 
-        movie_data['title'] = title
-        movie_data['interest score'] = get_interest(movie_soup)
-        print(movie_data)
-        # title
-        # cross_check title
-        # get will see/wont see dictionary
-        # ratings
+        data['title'] = title
+        data['interest score'] = get_interest(movie_soup)
+        data['rating'] = get_rating(movie_soup)
+        data['review count'] = get_count(movie_soup)
+        movie_data.append(data)
+
+    print(movie_data)
 
 # get the title of the movie
 def get_title(movie_soup):
@@ -77,3 +77,12 @@ def get_interest(movie_soup):
 # use the title to check if this movie is present in the other dataset
 def is_movie_present(title):
     return True
+
+def get_rating(movie_soup):
+    r_num = movie_soup.find('strong', {'itemprop':'ratingValue'}).string
+    rating = float(r_num)/5.0
+    return round(rating, 2)
+
+def get_count(movie_soup):
+    count = movie_soup.find('strong', {'itemprop':'reviewCount'}).string
+    return count
