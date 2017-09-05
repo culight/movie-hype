@@ -18,16 +18,19 @@ def get_html(url):
         print(request.status_code)
 
 # form a list of movie urls
-def get_movie_urls(list_html):
+def get_movie_urls(years):
     movie_thumbnails = []
     movie_urls = []
 
-    list_soup = BeautifulSoup(list_html, 'html.parser')
-    movie_thumbnails = [t for t in list_soup.find_all('div', {'class':'thumbnail'})]
-    for movie_thumbnail in movie_thumbnails:
-        for movie in movie_thumbnail.children:
-            if movie.name == 'a':
-                movie_urls.append(str(movie['href']))
+    for year in years:
+        mov_list = get_movielist_url(year)
+        list_html = get_html(mov_list)
+        list_soup = BeautifulSoup(list_html, 'html.parser')
+        movie_thumbnails = [t for t in list_soup.find_all('div', {'class':'thumbnail'})]
+        for movie_thumbnail in movie_thumbnails:
+            for movie in movie_thumbnail.children:
+                if movie.name == 'a':
+                    movie_urls.append(str(movie['href']))
     return movie_urls
 
 # scrape the relevant data and store in a SQL database
@@ -48,7 +51,7 @@ def scrape(movie_urls):
         data['review count'] = get_count(movie_soup)
         movie_data.append(data)
 
-    print(movie_data)
+    return movie_data
 
 # get the title of the movie
 def get_title(movie_soup):
@@ -70,6 +73,9 @@ def get_interest(movie_soup):
         if child.name == 'span' and 'seeCount' in child['id']:
             interest['wont see'] = int(child.string.replace(',',''))
 
+    if interest['wont see'] <= 0:
+        interest['wont see'] = 1
+        
     interest_score = float(interest['will see'])/float(interest['wont see'])
 
     return round(interest_score, 2)
@@ -86,3 +92,6 @@ def get_rating(movie_soup):
 def get_count(movie_soup):
     count = movie_soup.find('strong', {'itemprop':'reviewCount'}).string
     return count
+
+def get_news(movie_soup):
+    pass
