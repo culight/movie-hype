@@ -1,5 +1,8 @@
 from bs4 import BeautifulSoup
 import requests
+import csv
+import os
+import database as db
 
 BASE_URL = 'https://www.movieinsider.com/movies/popular/'
 PAGE_OFFSET = '?page_offset='
@@ -34,23 +37,30 @@ def get_movie_urls(years):
     return movie_urls
 
 # scrape the relevant data and store in a SQL database
-def scrape(movie_urls):
+def scrape(movie_urls, connection):
     movie_data = []
+    print('scraping data from movie website...')
+
+    get_names = "SELECT name FROM 'movie'"
+    names = db.run_query(get_names, connection).fetchall()
+    names = [n[0] for n in names]
+
     for url in movie_urls:
         data = {}
         movie_html = get_html(url)
         movie_soup = BeautifulSoup(movie_html, 'html.parser')
 
         title = get_title(movie_soup)
-        if not is_movie_present(title):
+        if title not in names:
+            print(title)
             continue
 
-        data['title'] = title
-        data['interest score'] = get_interest(movie_soup)
+        data['name'] = title
+        data['interest'] = get_interest(movie_soup)
         data['rating'] = get_rating(movie_soup)
-        data['review count'] = get_count(movie_soup)
+        data['review_count'] = get_count(movie_soup)
         movie_data.append(data)
-
+    print('done!')
     return movie_data
 
 # get the title of the movie
@@ -75,14 +85,10 @@ def get_interest(movie_soup):
 
     if interest['wont see'] <= 0:
         interest['wont see'] = 1
-        
+
     interest_score = float(interest['will see'])/float(interest['wont see'])
 
     return round(interest_score, 2)
-
-# use the title to check if this movie is present in the other dataset
-def is_movie_present(title):
-    return True
 
 def get_rating(movie_soup):
     r_num = movie_soup.find('strong', {'itemprop':'ratingValue'}).string
@@ -95,3 +101,23 @@ def get_count(movie_soup):
 
 def get_news(movie_soup):
     pass
+
+def convert_to_csv(data, file_path, file_name):
+    if not data or len(data) < 1:
+        print('no data available')
+
+    print("creating ", file_name, "...")
+
+    # delete the file if it exists (will rewrite)
+    if os.path.exists(file_path + file_name):
+        print('     rewriting...')
+        os.remove(file_path + file_name)
+
+    csv_filepath = os.path.join(file_path, file_name)
+
+    with open(csv_filepath, 'w') as f:
+        writer = csv.DictWriter(f,['name','interest', 'rating', 'review_count'])
+        writer.writeheader()
+        for datum in data:
+            writer.writerow(datum)
+    print('done!')
