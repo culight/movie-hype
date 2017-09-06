@@ -12,8 +12,8 @@ A exploratory data analysis project that seeks to answer the question: "Which mo
 - Develop a visual report using Tableau
 
 ## Setup
-- Uses python version 3.5
-- Jupyter 4.2
+- Python v3.5
+- Jupyter v4.2
 
 ## Cleaning/Transforming/Storing Process
 
