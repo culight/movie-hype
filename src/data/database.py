@@ -28,8 +28,6 @@ def create_tables(connection):
         CREATE TABLE feedback (
             name  TEXT PRIMARY KEY NOT NULL,
             interest REAL NOT NULL,
-            rating REAL NOT NULL,
-            review_count INTEGER NOT NULL,
             FOREIGN KEY (name) REFERENCES movie(name)
         );
     """
@@ -60,8 +58,8 @@ def insert_feedback(input_file, connection):
         reader = csv.reader(f)
         column = next(reader)
         records = [record for record in reader]
-        cursor.executemany("INSERT INTO feedback (name, interest, rating, \
-            review_count) VALUES (?, ?, ?, ?)", records)
+        cursor.executemany("INSERT INTO feedback (name, interest)\
+          VALUES (?, ?)", records)
         print('done!')
     connection.commit()
 

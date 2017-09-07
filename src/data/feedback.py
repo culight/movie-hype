@@ -26,14 +26,21 @@ def get_movie_urls(years):
     movie_urls = []
 
     for year in years:
-        mov_list = get_movielist_url(year)
-        list_html = get_html(mov_list)
-        list_soup = BeautifulSoup(list_html, 'html.parser')
-        movie_thumbnails = [t for t in list_soup.find_all('div', {'class':'thumbnail'})]
-        for movie_thumbnail in movie_thumbnails:
-            for movie in movie_thumbnail.children:
-                if movie.name == 'a':
-                    movie_urls.append(str(movie['href']))
+        offset = 0
+        no_more_movies = False
+        while no_more_movies == False:
+            mov_list_url = get_movielist_url(year, offset)
+            list_html = get_html(mov_list_url)
+            list_soup = BeautifulSoup(list_html, 'html.parser')
+            movie_thumbnails = [t for t in list_soup.find_all('div', {'class':'thumbnail'})]
+            for movie_thumbnail in movie_thumbnails:
+                for movie in movie_thumbnail.children:
+                    if movie.name == 'a':
+                        movie_urls.append(str(movie['href']))
+            if len(movie_thumbnails) < 7:
+                no_more_movies = True
+            else:
+                offset += 28
     return movie_urls
 
 # scrape the relevant data and store in a SQL database
@@ -41,25 +48,32 @@ def scrape(movie_urls, connection):
     movie_data = []
     print('scraping data from movie website...')
 
-    get_names = "SELECT name FROM 'movie'"
+    get_names = "SELECT name FROM 'movie' \
+      WHERE (year >= " + '2012' + " AND year <= " + '2016' + ")"
+    print(get_names)
     names = db.run_query(get_names, connection).fetchall()
     names = [n[0] for n in names]
+    print(names)
 
     for url in movie_urls:
         data = {}
-        movie_html = get_html(url)
-        movie_soup = BeautifulSoup(movie_html, 'html.parser')
+        try:
+            movie_html = get_html(url)
+            movie_soup = BeautifulSoup(movie_html, 'html.parser')
 
-        title = get_title(movie_soup)
-        if title not in names:
-            print(title)
-            continue
+            title = get_title(movie_soup)
+            if title not in names:
+                continue
 
-        data['name'] = title
-        data['interest'] = get_interest(movie_soup)
-        data['rating'] = get_rating(movie_soup)
-        data['review_count'] = get_count(movie_soup)
-        movie_data.append(data)
+            data['name'] = title
+            data['interest'] = get_interest(movie_soup)
+            movie_data.append(data)
+        except():
+            pass
+        finally:
+            return movie_data
+
+
     print('done!')
     return movie_data
 
@@ -90,15 +104,6 @@ def get_interest(movie_soup):
 
     return round(interest_score, 2)
 
-def get_rating(movie_soup):
-    r_num = movie_soup.find('strong', {'itemprop':'ratingValue'}).string
-    rating = float(r_num)/5.0
-    return round(rating, 2)
-
-def get_count(movie_soup):
-    count = movie_soup.find('strong', {'itemprop':'reviewCount'}).string
-    return count
-
 def get_news(movie_soup):
     pass
 
@@ -116,7 +121,7 @@ def convert_to_csv(data, file_path, file_name):
     csv_filepath = os.path.join(file_path, file_name)
 
     with open(csv_filepath, 'w') as f:
-        writer = csv.DictWriter(f,['name','interest', 'rating', 'review_count'])
+        writer = csv.DictWriter(f,['name','interest'])
         writer.writeheader()
         for datum in data:
             writer.writerow(datum)
