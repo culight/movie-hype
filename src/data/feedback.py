@@ -3,6 +3,7 @@ import requests
 import csv
 import os
 import database as db
+import unicodedata
 
 BASE_URL = 'https://www.movieinsider.com/movies/popular/'
 PAGE_OFFSET = '?page_offset='
@@ -41,38 +42,25 @@ def get_movie_urls(years):
                 no_more_movies = True
             else:
                 offset += 28
+    print('done!')
     return movie_urls
 
 # scrape the relevant data and store in a SQL database
-def scrape(movie_urls, connection):
+def scrape(movie_urls):
     movie_data = []
     print('scraping data from movie website...')
-
-    get_names = "SELECT name FROM 'movie' \
-      WHERE (year >= " + '2012' + " AND year <= " + '2016' + ")"
-    print(get_names)
-    names = db.run_query(get_names, connection).fetchall()
-    names = [n[0] for n in names]
-    print(names)
-
     for url in movie_urls:
         data = {}
-        try:
-            movie_html = get_html(url)
-            movie_soup = BeautifulSoup(movie_html, 'html.parser')
+        movie_html = get_html(url)
+        movie_soup = BeautifulSoup(movie_html, 'html.parser')
 
-            title = get_title(movie_soup)
-            if title not in names:
-                continue
+        title = get_title(movie_soup)
+        title = ''.join(e for e in title if e.isalnum() or e.isspace()).lower()
+        print(title)
 
-            data['name'] = title
-            data['interest'] = get_interest(movie_soup)
-            movie_data.append(data)
-        except():
-            pass
-        finally:
-            return movie_data
-
+        data['movie_title'] = title
+        data['interest'] = get_interest(movie_soup)
+        movie_data.append(data)
 
     print('done!')
     return movie_data
@@ -104,10 +92,8 @@ def get_interest(movie_soup):
 
     return round(interest_score, 2)
 
-def get_news(movie_soup):
-    pass
-
-def convert_to_csv(data, file_path, file_name):
+def convert_to_csv(data, file_path):
+    file_name = os.path.join(file_path, 'interest_data.csv')
     if not data or len(data) < 1:
         print('no data available')
 
@@ -121,8 +107,12 @@ def convert_to_csv(data, file_path, file_name):
     csv_filepath = os.path.join(file_path, file_name)
 
     with open(csv_filepath, 'w') as f:
-        writer = csv.DictWriter(f,['name','interest'])
+        writer = csv.DictWriter(f,['movie_title','interest'])
         writer.writeheader()
         for datum in data:
-            writer.writerow(datum)
+            try:
+                writer.writerow(datum)
+            except UnicodeEncodeError:
+                print('non-ascii characters found')
+                continue
     print('done!')
