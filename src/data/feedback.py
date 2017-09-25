@@ -25,7 +25,7 @@ def get_html(url):
 def get_movie_urls(years):
     movie_thumbnails = []
     movie_urls = []
-
+    print('getting movie urls... ')
     for year in years:
         offset = 0
         no_more_movies = False
@@ -41,7 +41,7 @@ def get_movie_urls(years):
             if len(movie_thumbnails) < 7:
                 no_more_movies = True
             else:
-                offset += 28
+                offset += 28*2
     print('done!')
     return movie_urls
 
@@ -56,7 +56,6 @@ def scrape(movie_urls):
 
         title = get_title(movie_soup)
         title = ''.join(e for e in title if e.isalnum() or e.isspace()).lower()
-        print(title)
 
         data['movie_title'] = title
         data['interest'] = get_interest(movie_soup)
@@ -97,7 +96,7 @@ def convert_to_csv(data, file_path):
     if not data or len(data) < 1:
         print('no data available')
 
-    print("creating ", file_name, "...")
+    print("creating " + file_name + "...")
 
     # delete the file if it exists (will rewrite)
     if os.path.exists(file_path + file_name):
