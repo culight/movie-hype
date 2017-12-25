@@ -1,9 +1,11 @@
 import csv
 import os
+from datetime import datetime as dt
+import json
 
-def audit_imdb_data(data_dir):
-    read_file = os.path.join(data_dir, 'interim/imdb_data.csv')
-    write_file = os.path.join(data_dir,'processed/imdb_data.csv')
+def clean_imdb_data(data_dir):
+    read_file = os.path.join(data_dir, 'interim/tmdb_data.csv')
+    write_file = os.path.join(data_dir,'processed/tmdb_data.csv')
 
     if not os.path.exists(read_file):
         print('csv file not found')
@@ -15,14 +17,41 @@ def audit_imdb_data(data_dir):
 
     with open(read_file, 'r') as f:
         reader = csv.DictReader(f)
-        headers = reader.next()
+        headers = reader.next().keys()
+        headers.remove('release_date')
+        headers.append('title_year')
         for row in reader:
+            # clean the movie name
             cleaned_name = ''.join(e for e in row['movie_title'] if e.isalnum() or e.isspace()).lower()
             row.pop('movie_title')
             if cleaned_name not in cleaned_names:
                 cleaned_names.append(cleaned_name)
                 row['movie_title'] = cleaned_name
-                cleaned_data.append(row)
+            else:
+                # this movie name already exists... skip
+                continue
+
+            # convert date to year
+            if(row['release_date']):
+                row['title_year'] = dt.strptime(row['release_date'], "%m/%d/%y").year
+                row.pop('release_date')
+            else:
+                continue
+
+            # extract genres from json string
+            if(row['genres']):
+                genre_json = json.loads(row['genres'])
+                genres = '|'.join([g['name'] for g in genre_json])
+                row['genres'] = genres
+            else:
+                continue
+
+            # remove entries with missing financial data
+            if(row['budget'] == '0' or row['revenue'] == '0'):
+                continue
+
+            # add the updated row
+            cleaned_data.append(row)
 
     with open(write_file, 'wb') as w:
         writer = csv.DictWriter(w, headers)
@@ -30,7 +59,7 @@ def audit_imdb_data(data_dir):
         for row in cleaned_data:
             writer.writerow(row)
 
-def audit_additional_data(data_dir):
+def clean_additional_data(data_dir):
     read_file = os.path.join(data_dir, 'interim/additional_data.csv')
     write_file = os.path.join(data_dir,'processed/additional_data.csv')
 
