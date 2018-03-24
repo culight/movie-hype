@@ -41,6 +41,7 @@ def get_movie_urls(year):
         if len(movie_thumbnails) < 7:
             no_more_movies = True
         else:
+            # there are, at most, 28 movies per page - not skipping pages
             offset += 28*1
     print(' done!')
     return movie_urls
